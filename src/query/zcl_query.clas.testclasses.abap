@@ -274,6 +274,7 @@ DURATION SHORT.
                 i_entity         TYPE REF TO zif_entity
                 i_parameters     TYPE zif_query=>parameters
                 i_where_string   TYPE string
+                i_fields         TYPE string OPTIONAL
       RETURNING VALUE(r_query)   TYPE REF TO zcl_query.
   PRIVATE SECTION.
     DATA datasource TYPE REF TO zif_datasource.
@@ -304,6 +305,7 @@ CLASS lcl_entity_manager IMPLEMENTATION.
         i_entity = i_entity
         i_parameters = i_parameters
         i_where_string = i_where_string
+        i_fields = i_fields
     ).
   ENDMETHOD.
 
@@ -416,8 +418,11 @@ DURATION SHORT.
       RAISING
         zcx_query.
     METHODS test_single_result FOR TESTING
-              RAISING
-                zcx_query.
+      RAISING
+        zcx_query.
+    METHODS test_overwrite_fields FOR TESTING
+      RAISING
+        zcx_query.
   PRIVATE SECTION.
     DATA query TYPE REF TO zcl_query.
     DATA em TYPE REF TO lcl_entity_manager.
@@ -467,7 +472,7 @@ CLASS lcl_query_test IMPLEMENTATION.
 
   METHOD test_get_result_list.
     DATA value TYPE string VALUE 'value'.
-    data(multiple_datasource) = NEW lcl_multiple_datasource( ).
+    DATA(multiple_datasource) = NEW lcl_multiple_datasource( ).
     em->set_datasource( multiple_datasource  ).
     DATA(query_multiple_results) = lcl_entity_manager=>create_query(
         i_entity_manager = em
@@ -497,7 +502,7 @@ CLASS lcl_query_test IMPLEMENTATION.
 
   METHOD test_single_result.
     DATA value TYPE string VALUE 'value'.
-    data(single_datasource) = NEW lcl_single_datasource( ).
+    DATA(single_datasource) = NEW lcl_single_datasource( ).
     em->set_datasource( single_datasource  ).
     DATA(query_single_result) = lcl_entity_manager=>create_query(
         i_entity_manager = em
@@ -509,11 +514,32 @@ CLASS lcl_query_test IMPLEMENTATION.
     DATA(result) = query_single_result->zif_query~get_single_result( ).
     cl_abap_unit_assert=>assert_bound( msg = 'Must have 1 results' act =  result ).
     cl_abap_unit_assert=>assert_equals(
-      msg = 'Query must have attributes and parameters'
+      msg = 'Query must has attributes and parameters'
       act = single_datasource->query
       exp = 'SELECT attribute1 attribute2 attribute3 FROM RESULT_SET WHERE parameter1 = ''value'''
     ).
     cl_abap_unit_assert=>assert_equals( msg = 'Three attributes must be mutated' act = lines( mutator->mutated_values ) exp = 3 ).
+  ENDMETHOD.
+
+  METHOD test_overwrite_fields.
+    DATA value TYPE string VALUE 'value'.
+    DATA(single_datasource) = NEW lcl_single_datasource( ).
+    em->set_datasource( single_datasource  ).
+    DATA(query_single_result) = lcl_entity_manager=>create_query(
+        i_entity_manager = em
+        i_entity = entity
+        i_where_string = 'parameter1 = ?'
+        i_parameters = VALUE zif_query=>parameters( ( position = 1 parameter = NEW lcl_position_parameter( ) ) )
+        i_fields = 'attribute1 attribute2'
+    ).
+    query_single_result->zif_query~set_parameter( i_position = 1 i_value = value ).
+    DATA(result) = query_single_result->zif_query~get_single_result( ).
+    cl_abap_unit_assert=>assert_bound( msg = 'Must have 1 results' act =  result ).
+    cl_abap_unit_assert=>assert_equals(
+      msg = 'Query must has just two fields'
+      act = single_datasource->query
+      exp = 'SELECT attribute1 attribute2 FROM RESULT_SET WHERE parameter1 = ''value'''
+    ).
   ENDMETHOD.
 
 ENDCLASS.

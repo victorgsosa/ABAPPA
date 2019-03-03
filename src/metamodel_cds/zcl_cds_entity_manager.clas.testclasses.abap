@@ -150,12 +150,12 @@ DURATION SHORT.
     METHODS test_query_with_named_params FOR TESTING
       RAISING
         zcx_query.
-    methods test_query_with_pos_params for testing
-              RAISING
-                zcx_query.
-    methods test_query_with_unmark_params for testing
-              RAISING
-                zcx_query.
+    METHODS test_query_with_pos_params FOR TESTING
+      RAISING
+        zcx_query.
+    METHODS test_query_with_unmark_params FOR TESTING
+      RAISING
+        zcx_query.
     METHODS test_query_creation_no_entity FOR TESTING.
   PRIVATE SECTION.
     DATA em TYPE REF TO zcl_cds_entity_manager.
@@ -165,13 +165,14 @@ ENDCLASS.
 CLASS lcl_entity_manager_test IMPLEMENTATION.
 
   METHOD test_query_creation.
-    DATA(query) = me->em->zif_entity_manager~create_query( 'SELECT * FROM lcl_ddl_object_names').
+    DATA(query) = me->em->zif_entity_manager~create_query( 'SELECT att1 att2 FROM lcl_ddl_object_names').
     cl_abap_unit_assert=>assert_bound( msg = 'Query must be bound' act = query ).
     cl_abap_unit_assert=>assert_equals(
         msg = 'Query must map entity lcl_ddl_object_names'
         act = query->get_entity( )->zif_type~get_abap_type( )
         exp = cl_abap_classdescr=>describe_by_name( 'LCL_DDL_OBJECT_NAMES' )
     ).
+    cl_abap_unit_assert=>assert_equals( msg = 'Query must have the same fields' exp = 'ATT1 ATT2' act = query->get_fields( ) ).
   ENDMETHOD.
 
   METHOD test_query_creation_no_entity.

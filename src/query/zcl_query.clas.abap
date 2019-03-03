@@ -11,12 +11,14 @@ CLASS zcl_query DEFINITION
         i_entity_manager TYPE REF TO zif_entity_manager
         i_entity         TYPE REF TO zif_entity
         i_parameters     TYPE zif_query=>parameters
-        i_where_string   TYPE string.
+        i_where_string   TYPE string
+        i_fields         TYPE string OPTIONAL.
   PRIVATE SECTION.
     DATA entity_manager TYPE REF TO zif_entity_manager.
     DATA entity TYPE REF TO zif_entity.
     DATA parameters TYPE zif_query=>parameters.
     DATA where_string TYPE string.
+    DATA fields TYPE string.
     METHODS execute_query
       RETURNING
         VALUE(r_result) TYPE zif_query=>objects
@@ -51,7 +53,7 @@ CLASS zcl_query DEFINITION
     METHODS create_table_type
       RETURNING
         VALUE(r_result) TYPE REF TO cl_abap_tabledescr.
-    METHODS build_fields
+    METHODS build_entity_fields
       RETURNING
         VALUE(r_result) TYPE string.
 ENDCLASS.
@@ -66,7 +68,7 @@ CLASS zcl_query IMPLEMENTATION.
     me->entity = i_entity.
     me->parameters = i_parameters.
     me->where_string = i_where_string.
-
+    me->fields = i_fields.
   ENDMETHOD.
 
 
@@ -131,7 +133,7 @@ CLASS zcl_query IMPLEMENTATION.
     me->entity_manager->get_datasource( )->execute_statement(
         EXPORTING
          i_table = me->entity->zif_managed_type~get_table_type( )->get_relative_name( )
-         i_fields = build_fields( )
+         i_fields = COND #( WHEN me->fields IS NOT INITIAL THEN me->fields ELSE build_entity_fields( ) )
          i_where = build_where( )
         IMPORTING
          e_result_set = <results>
@@ -186,10 +188,10 @@ CLASS zcl_query IMPLEMENTATION.
     IF sy-subrc EQ 0.
       TRY.
           i_attribute->mutator( )->set_value( EXPORTING i_value = <value> CHANGING c_parent_object = c_object ).
-        CATCH zcx_metamodel into data(exception).
-          raise exception type zcx_query
+        CATCH zcx_metamodel INTO DATA(exception).
+          RAISE EXCEPTION TYPE zcx_query
             EXPORTING
-             previous = exception.
+              previous = exception.
       ENDTRY.
     ENDIF.
 
@@ -220,14 +222,18 @@ CLASS zcl_query IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD build_fields.
+  METHOD build_entity_fields.
     DATA(attribute_names) = VALUE string_table( FOR attribute IN me->entity->zif_managed_type~get_attributes( ) ( attribute->get_name( ) ) ).
     r_result = REDUCE string(
-        INIT fields = ``
+        INIT f = ``
         FOR name IN attribute_names
-        NEXT fields = |{ fields } { name }|
+        NEXT f = |{ f } { name }|
     ).
     r_result = condense( r_result ).
+  ENDMETHOD.
+
+  METHOD zif_query~get_fields.
+    r_fields = me->fields.
   ENDMETHOD.
 
 ENDCLASS.

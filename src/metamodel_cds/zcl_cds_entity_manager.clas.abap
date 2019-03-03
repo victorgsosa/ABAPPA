@@ -47,6 +47,7 @@ CLASS zcl_cds_entity_manager IMPLEMENTATION.
         i_entity = result->get_entity( )
         i_parameters = result->get_parameters( )
         i_where_string = result->get_where( )
+        i_fields = result->get_fields( )
     ).
   ENDMETHOD.
 

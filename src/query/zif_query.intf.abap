@@ -12,6 +12,8 @@ INTERFACE zif_query
     RETURNING VALUE(r_entity) TYPE REF TO zif_entity.
   METHODS get_where_string
     RETURNING VALUE(r_where_string) TYPE string.
+  METHODS get_fields
+    RETURNING VALUE(r_fields) TYPE string.
   METHODS get_parameter
     IMPORTING
               i_name             TYPE string OPTIONAL
@@ -29,7 +31,7 @@ INTERFACE zif_query
   METHODS get_result_list
     RETURNING VALUE(r_results) TYPE zif_query=>objects
     RAISING
-      zcx_query.
+              zcx_query.
   METHODS get_single_result
     RETURNING VALUE(r_result) TYPE REF TO object
     RAISING

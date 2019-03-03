@@ -9,12 +9,15 @@ CLASS lcl_collector DEFINITION.
       set_parameters IMPORTING i_parameters TYPE zif_query=>parameters,
       add_parameter IMPORTING i_parameter TYPE zif_query=>parameter,
       append_to_where IMPORTING i_token TYPE string,
-      get_where RETURNING VALUE(r_result) TYPE string.
+      get_where RETURNING VALUE(r_result) TYPE string,
+      get_fields RETURNING VALUE(r_result) TYPE string,
+      set_fields IMPORTING i_fields TYPE string.
 
   PRIVATE SECTION.
     DATA entity TYPE REF TO zif_entity.
     DATA parameters TYPE zif_query=>parameters.
     DATA where TYPE string.
+    DATA fields TYPE string.
 ENDCLASS.
 
 CLASS lcl_collector IMPLEMENTATION.
@@ -53,6 +56,14 @@ CLASS lcl_collector IMPLEMENTATION.
     r_result = me->where.
   ENDMETHOD.
 
+  METHOD get_fields.
+    r_result = me->fields.
+  ENDMETHOD.
+
+  METHOD set_fields.
+    me->fields = i_fields.
+  ENDMETHOD.
+
 ENDCLASS.
 
 
@@ -66,7 +77,33 @@ INTERFACE lif_collector_state.
       zcx_query.
 ENDINTERFACE.
 
+CLASS lcl_fields_state DEFINITION INHERITING FROM zcl_state.
+  PUBLIC SECTION.
+    INTERFACES lif_collector_state.
+    METHODS constructor
+      IMPORTING
+        i_final TYPE abap_bool OPTIONAL.
+ENDCLASS.
 
+CLASS lcl_fields_state IMPLEMENTATION.
+
+  METHOD lif_collector_state~apply.
+    DATA(fields) = c_collector->get_fields( ).
+    IF fields IS INITIAL.
+      fields = i_c.
+    ELSE.
+      fields = |{ fields } { i_c }|.
+    ENDIF.
+    c_collector->set_fields( fields ).
+  ENDMETHOD.
+
+  METHOD constructor.
+
+    super->constructor( i_final = i_final ).
+
+  ENDMETHOD.
+
+ENDCLASS.
 
 CLASS lcl_entity_state DEFINITION INHERITING FROM zcl_state.
   PUBLIC SECTION.
@@ -315,6 +352,7 @@ CLASS lcl_query_fsm IMPLEMENTATION.
     DATA(initial) = NEW zcl_state( i_final = abap_false ).
     DATA(where) = NEW zcl_state( i_final = abap_false ).
     DATA(from_state) = NEW zcl_state( i_final = abap_false ).
+    data(fields) = new lcl_fields_state( i_final = abap_false ).
     DATA(entity) = NEW lcl_entity_state( i_final = abap_true i_em = i_em ).
     DATA(named_parameter) = NEW lcl_named_parameter_state( i_final = abap_true ).
     DATA(position_parameter) = NEW lcl_positional_parameter( i_final = abap_true ).
@@ -322,8 +360,10 @@ CLASS lcl_query_fsm IMPLEMENTATION.
     DATA(named_word) = NEW lcl_where_state( i_final = abap_false ).
     DATA(position_word) = NEW lcl_where_state( i_final = abap_false ).
     DATA(unmarked_word) = NEW lcl_where_state( i_final = abap_false ).
-    initial->zif_state~with( NEW zcl_transition( i_pattern = 'FROM' i_next = from_state ) ).
-    initial->zif_state~with( NEW zcl_transition( i_pattern = '^(?!(FROM)).*' i_next = initial ) ).
+    initial->zif_state~with( NEW zcl_transition( i_pattern = 'SELECT' i_next = initial ) ).
+    initial->zif_state~with( NEW zcl_transition( i_pattern = '^(?!SELECT$).*' i_next = fields ) ).
+    fields->zif_state~with( NEW zcl_transition( i_pattern = '^(?!FROM$).*' i_next = fields ) ).
+    fields->zif_state~with( NEW zcl_transition( i_pattern = 'FROM' i_next = from_state ) ).
     from_state->zif_state~with( NEW zcl_transition( i_pattern = '.*' i_next = entity ) ).
     entity->zif_state~with( NEW zcl_transition( i_pattern = '.*' i_next = where ) ).
     where->zif_state~with( NEW zcl_transition( i_pattern = '^(?!\?|:).*' i_next = where ) ).
