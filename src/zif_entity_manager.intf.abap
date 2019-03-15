@@ -8,7 +8,7 @@ INTERFACE zif_entity_manager
     IMPORTING
               i_query          TYPE string
               i_selections     TYPE zif_query=>selection_tab OPTIONAL
-              i_authorizations TYPE zif_query_auth=>tab OPTIONAL
+              i_restrictions TYPE zif_query_restrictor=>tab OPTIONAL
     RETURNING VALUE(r_query)   TYPE REF TO zif_query
     RAISING
               zcx_query.

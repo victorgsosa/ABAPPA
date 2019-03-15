@@ -48,13 +48,13 @@ CLASS zcl_cds_entity_manager IMPLEMENTATION.
     WHEN i_selections IS NOT INITIAL THEN |( { result->get_where( ) } ) AND ( { zcl_query_utils=>range_as_where( i_selections = i_selections ) } )|
     ELSE result->get_where( )
     ).
-    IF i_authorizations IS NOT INITIAL.
-      DATA(authorization_where) = REDUCE string(
+    IF i_restrictions IS NOT INITIAL.
+      DATA(restriction_where) = REDUCE string(
           INIT r = ``
-          FOR authorization IN i_authorizations
-          NEXT r =  r && ` AND ( ` && authorization->restrict( ) && ` )`
+          FOR restriction IN i_restrictions
+          NEXT r =  r && ` AND ( ` && restriction->restrict( ) && ` )`
       ).
-      where = where && authorization_where.
+      where = where && restriction_where.
     ENDIF.
     r_query = NEW zcl_query(
         i_entity_manager = me

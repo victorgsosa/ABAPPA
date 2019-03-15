@@ -11,6 +11,14 @@ CLASS zcl_abstract_query_auth DEFINITION
         i_object         TYPE xuobject
         i_activity       TYPE activ_auth
         i_auth_retriever TYPE REF TO zif_auth_retriever.
+    methods get_object
+    RETURNING VALUE(r_object) type xuobject.
+
+  METHODS get_auth_retriever
+    RETURNING VALUE(r_auth_retriever) TYPE REF TO zif_auth_retriever.
+
+  methods get_activity
+    RETURNING VALUE(r_activity) type activ_auth.
 
   PRIVATE SECTION.
     DATA object TYPE xuobject.
@@ -39,16 +47,16 @@ CLASS zcl_abstract_query_auth IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_query_auth~get_auth_retriever.
+  METHOD get_auth_retriever.
     r_auth_retriever = me->auth_retriever.
   ENDMETHOD.
 
 
-  METHOD zif_query_auth~restrict.
-    DATA(authorizations) = me->zif_query_auth~get_auth_retriever( )->get_authorizations(
-        i_object = me->zif_query_auth~get_object( )
-        i_user = i_user
-        i_activity = me->zif_query_auth~get_activity( )
+  METHOD zif_query_restrictor~restrict.
+    DATA(authorizations) = me->get_auth_retriever( )->get_authorizations(
+        i_object = me->get_object( )
+        i_user = sy-uname
+        i_activity = me->get_activity( )
     ).
     r_restriction = REDUCE #(
         INIT r = ``
@@ -57,7 +65,7 @@ CLASS zcl_abstract_query_auth IMPLEMENTATION.
     ).
   ENDMETHOD.
 
-  METHOD zif_query_auth~get_object.
+  METHOD get_object.
     r_object = me->object.
   ENDMETHOD.
 
@@ -91,7 +99,7 @@ CLASS zcl_abstract_query_auth IMPLEMENTATION.
     TRANSLATE r_restriction USING '*%+_'.
   ENDMETHOD.
 
-  METHOD zif_query_auth~get_activity.
+  METHOD get_activity.
     r_activity = me->activity.
   ENDMETHOD.
 
