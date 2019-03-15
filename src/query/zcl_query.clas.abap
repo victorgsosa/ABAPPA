@@ -107,7 +107,7 @@ CLASS zcl_query IMPLEMENTATION.
     DATA r_value TYPE REF TO data.
     DATA(parameter) = me->zif_query~get_parameter( i_name = i_name i_position = i_position ).
     DATA(value_type) = cl_abap_typedescr=>describe_by_data( i_value ).
-    IF value_type->type_kind NE parameter->get_kind( ).
+    IF value_type->type_kind <> parameter->get_kind( ) AND parameter->get_kind( ) <> cl_abap_typedescr=>typekind_any.
       RAISE EXCEPTION TYPE zcx_query.
     ENDIF.
     GET REFERENCE OF i_value INTO r_value.
@@ -201,15 +201,16 @@ CLASS zcl_query IMPLEMENTATION.
     IF i_name IS NOT INITIAL AND i_position IS NOT INITIAL.
       RAISE EXCEPTION TYPE zcx_query.
     ENDIF.
-    IF NOT line_exists( me->parameters[ name = i_name ] ).
-      IF NOT line_exists( me->parameters[ position = i_position ] ).
-        RAISE EXCEPTION TYPE zcx_query.
-      ELSE.
-        r_value = me->parameters[ position = i_position ]-value.
-      ENDIF.
-    ELSE.
+    IF i_name IS NOT INITIAL AND line_exists( me->parameters[ name = i_name ] ).
       r_value = me->parameters[ name = i_name ]-value.
+      RETURN.
+    ELSE.
+      IF line_exists( me->parameters[ position = i_position ] ).
+        r_value = me->parameters[ position = i_position ]-value.
+        RETURN.
+      ENDIF.
     ENDIF.
+    RAISE EXCEPTION TYPE zcx_query.
   ENDMETHOD.
 
 

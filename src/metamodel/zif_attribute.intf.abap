@@ -11,4 +11,8 @@ INTERFACE zif_attribute
     RETURNING VALUE(r_parent_entity) TYPE REF TO zif_entity.
   METHODS get_abap_type
     RETURNING VALUE(r_abap_type) TYPE REF TO cl_abap_typedescr.
+  METHODS is_collection
+    RETURNING VALUE(r_collection) TYPE abap_bool.
+  METHODS is_association
+    RETURNING VALUE(r_association) TYPE abap_bool.
 ENDINTERFACE.

@@ -1,13 +1,15 @@
-interface ZIF_ENTITY_MANAGER
-  public .
-    methods get_metamodel
-        RETURNING VALUE(r_metamodel) type ref to zif_metamodel.
-    methods get_datasource
-        RETURNING VALUE(r_datasource) type ref to zif_datasource.
-    methods create_query
-        importing
-            i_query type string
-        RETURNING VALUE(r_query) type ref to zif_query
-        RAISING
-          zcx_query.
-endinterface.
+INTERFACE zif_entity_manager
+  PUBLIC .
+  METHODS get_metamodel
+    RETURNING VALUE(r_metamodel) TYPE REF TO zif_metamodel.
+  METHODS get_datasource
+    RETURNING VALUE(r_datasource) TYPE REF TO zif_datasource.
+  METHODS create_query
+    IMPORTING
+              i_query          TYPE string
+              i_selections     TYPE zif_query=>selection_tab OPTIONAL
+              i_authorizations TYPE zif_query_auth=>tab OPTIONAL
+    RETURNING VALUE(r_query)   TYPE REF TO zif_query
+    RAISING
+              zcx_query.
+ENDINTERFACE.

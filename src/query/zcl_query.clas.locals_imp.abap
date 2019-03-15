@@ -123,13 +123,13 @@ CLASS lcl_pos_unmarked_param_state DEFINITION INHERITING FROM lcl_abstract_where
   PUBLIC SECTION.
     METHODS constructor
       IMPORTING
-        i_final TYPE abap_bool OPTIONAL
-        i_query TYPE REF TO zif_query
-        i_position type i DEFAULT 1.
+        i_final    TYPE abap_bool OPTIONAL
+        i_query    TYPE REF TO zif_query
+        i_position TYPE i DEFAULT 1.
     METHODS: zif_state_with_parameter~get_parameter REDEFINITION.
   PRIVATE SECTION.
     DATA query TYPE REF TO zif_query.
-    data position type i.
+    DATA position TYPE i.
 ENDCLASS.
 
 CLASS lcl_pos_unmarked_param_state IMPLEMENTATION.
@@ -183,22 +183,21 @@ CLASS lcl_where_fsm IMPLEMENTATION.
 
   METHOD zif_fsm~switch_state.
     DATA(new_state) = me->zif_fsm~current_state( )->transit( i_c ).
-    IF new_state IS INSTANCE OF zif_state_with_parameter.
-      TRY.
-          DATA(token) = CAST  zif_state_with_parameter( new_state )->get_parameter( i_c ).
-        CATCH zcx_query INTO DATA(exception).
-          RAISE EXCEPTION TYPE zcx_fsm
-            EXPORTING
-              previous = exception.
-      ENDTRY.
-      IF me->result IS NOT INITIAL.
-        DATA(new_result) = |{ me->result } { token }|.
-      ELSE.
-        new_result = token.
-      ENDIF.
-    ELSE.
-      new_result = me->result.
-    ENDIF.
+
+    TRY.
+        DATA(token) = CAST  zif_state_with_parameter( new_state )->get_parameter( i_c ).
+        IF me->result IS NOT INITIAL.
+          DATA(new_result) = |{ me->result } { token }|.
+        ELSE.
+          new_result = token.
+        ENDIF.
+      CATCH zcx_query INTO DATA(exception).
+        RAISE EXCEPTION TYPE zcx_fsm
+          EXPORTING
+            previous = exception.
+      CATCH cx_sy_move_cast_error.
+        new_result = me->result.
+    ENDTRY.
     r_fsm = NEW lcl_where_fsm( i_current = new_state  i_result = new_result ).
   ENDMETHOD.
 
@@ -215,7 +214,7 @@ CLASS lcl_where_fsm IMPLEMENTATION.
     DATA(with_unmarked_word) = NEW lcl_word_state( i_final = abap_true ).
     DATA(named_parameter) = NEW lcl_named_parameter_state( i_final = abap_true i_query = i_query ).
     DATA(position_parameter) = NEW lcl_position_parameter_state( i_final = abap_true i_query = i_query ).
-    data(unmarked_parameter) = new lcl_pos_unmarked_param_state( i_final = abap_true i_query = i_query ).
+    DATA(unmarked_parameter) = NEW lcl_pos_unmarked_param_state( i_final = abap_true i_query = i_query ).
     no_parameters->zif_state~with( NEW zcl_transition( i_pattern = '^(?!\?|:).*' i_next = no_parameters ) ).
     no_parameters->zif_state~with( NEW zcl_transition( i_pattern = '^\?.{1}' i_next = position_parameter ) ).
     no_parameters->zif_state~with( NEW zcl_transition( i_pattern = '^\?' i_next = unmarked_parameter ) ).

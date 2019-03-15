@@ -31,8 +31,8 @@ CLASS zcl_cds_metamodel DEFINITION
       IMPORTING
         i_entity           TYPE REF TO zif_entity
         i_class            TYPE REF TO cl_abap_classdescr
-        i_type             type ref to cl_abap_typedescr
-        i_component        TYPE abap_compdescr
+        i_type             TYPE REF TO cl_abap_typedescr
+        i_name             TYPE string
       RETURNING
         VALUE(r_attribute) TYPE REF TO zif_attribute
       RAISING
@@ -53,34 +53,42 @@ CLASS zcl_cds_metamodel IMPLEMENTATION.
 
 
   METHOD build_entity.
-    DATA view_type TYPE REF TO cl_abap_structdescr.
+ DATA view_type TYPE REF TO cl_abap_structdescr.
     DATA(view_name) = view_name( i_class ).
+    DATA(entity_factory) = cl_sadl_entity_factory=>get_instance( ).
+    TRY.
+        IF  entity_factory->entity_exists(
+            EXPORTING
+               iv_id  = CONV #( view_name )
+               iv_type = cl_sadl_entity_factory=>co_type-cds
+        ).
 
-    cl_dd_ddl_utilities=>is_cds_view(
-        EXPORTING
-            name = CONV #( view_name )
-        IMPORTING
-            is_cds_view = DATA(is_cds_view)
-    ).
-    IF is_cds_view <> abap_true.
-      RAISE EXCEPTION TYPE zcx_metamodel.
-    ENDIF.
 
-    view_type ?= cl_abap_structdescr=>describe_by_name( view_name ).
-    DATA(entity) = NEW zcl_entity( i_abap_type = i_class i_table_type = view_type ).
-    LOOP AT view_type->components INTO DATA(component).
-      TRY.
-          DATA(attribute) = build_attribute_for_entity(
-                i_entity    = entity
-                i_class     = i_class
-                i_type = view_type->get_component_type( component-name )
-                i_component = component ).
-          entity->add_attribute( attribute ).
-        CATCH zcx_metamodel.
-      ENDTRY.
+          view_type ?= cl_abap_structdescr=>describe_by_name( view_name ).
+          DATA(entity_metadata) = cl_sadl_entity_factory=>get_instance( )->get_entity( iv_id = CONV #( view_name ) iv_type = cl_sadl_entity_factory=>co_type-cds ).
+          DATA(entity) = NEW zcl_entity( i_abap_type = i_class i_table_type = view_type ).
+          entity_metadata->get_elements( IMPORTING et_elements = DATA(elements) ).
+          LOOP AT elements INTO DATA(element).
+            TRY.
+                DATA(attribute) = build_attribute_for_entity(
+                      i_entity    = entity
+                      i_class     = i_class
+                      i_type = cl_abap_typedescr=>describe_by_name( element-data_type )
+                      i_name = element-name ).
+                entity->add_attribute( attribute ).
+              CATCH zcx_metamodel.
+            ENDTRY.
 
-    ENDLOOP.
-    r_result = entity.
+          ENDLOOP.
+          r_result = entity.
+        ELSE.
+          RAISE EXCEPTION TYPE zcx_metamodel.
+        ENDIF.
+      CATCH cx_sadl_static INTO DATA(exception).
+        RAISE EXCEPTION TYPE zcx_metamodel
+          EXPORTING
+            previous = exception.
+    ENDTRY.
 
   ENDMETHOD.
 
@@ -99,10 +107,10 @@ CLASS zcl_cds_metamodel IMPLEMENTATION.
 
   METHOD build_attribute_for_entity.
 
-    DATA(accesor) = zcl_metadata_utils=>accesor_for( i_class = i_class i_name = CONV #( i_component-name ) ).
-    DATA(mutator) = zcl_metadata_utils=>mutator_for( i_class = i_class i_name = CONV #( i_component-name ) ).
+    DATA(accesor) = zcl_metadata_utils=>accesor_for( i_class = i_class i_name = i_name ).
+    DATA(mutator) = zcl_metadata_utils=>mutator_for( i_class = i_class i_name = i_name ).
     r_attribute  = NEW zcl_attribute(
-     i_name = CONV #( i_component-name )
+     i_name = i_name
      i_abap_type = i_type
      i_parent_entity = i_entity
      i_mutator = mutator

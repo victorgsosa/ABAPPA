@@ -152,6 +152,7 @@ CLASS lcl_entity_state IMPLEMENTATION.
 
 ENDCLASS.
 
+
 CLASS lcl_abstract_parameter_state DEFINITION INHERITING FROM zcl_state ABSTRACT CREATE PROTECTED.
   PUBLIC SECTION.
     INTERFACES lif_collector_state.
@@ -330,15 +331,14 @@ CLASS lcl_query_fsm IMPLEMENTATION.
 
   METHOD zif_fsm~switch_state.
     DATA(new_state) = me->zif_fsm~current_state( )->transit( i_c ).
-    IF new_state IS INSTANCE OF lif_collector_state.
-      TRY.
-          CAST lif_collector_state( new_state )->apply( EXPORTING i_c = i_c CHANGING c_collector = me->result ).
-        CATCH zcx_query INTO DATA(exception).
-          RAISE EXCEPTION TYPE zcx_fsm
-            EXPORTING
-              previous = exception.
-      ENDTRY.
-    ENDIF.
+    TRY.
+        CAST lif_collector_state( new_state )->apply( EXPORTING i_c = i_c CHANGING c_collector = me->result ).
+      CATCH zcx_query INTO DATA(exception).
+        RAISE EXCEPTION TYPE zcx_fsm
+          EXPORTING
+            previous = exception.
+      CATCH cx_sy_move_cast_error.
+    ENDTRY.
     r_fsm = NEW lcl_query_fsm( i_current = new_state i_result = me->result ).
   ENDMETHOD.
 
@@ -350,9 +350,10 @@ CLASS lcl_query_fsm IMPLEMENTATION.
 
   METHOD create.
     DATA(initial) = NEW zcl_state( i_final = abap_false ).
-    DATA(where) = NEW zcl_state( i_final = abap_false ).
+    DATA(where_initial) = NEW zcl_state( i_final = abap_false ).
+    DATA(where) = NEW lcl_where_state( i_final = abap_false ).
     DATA(from_state) = NEW zcl_state( i_final = abap_false ).
-    data(fields) = new lcl_fields_state( i_final = abap_false ).
+    DATA(fields) = NEW lcl_fields_state( i_final = abap_false ).
     DATA(entity) = NEW lcl_entity_state( i_final = abap_true i_em = i_em ).
     DATA(named_parameter) = NEW lcl_named_parameter_state( i_final = abap_true ).
     DATA(position_parameter) = NEW lcl_positional_parameter( i_final = abap_true ).
@@ -365,7 +366,8 @@ CLASS lcl_query_fsm IMPLEMENTATION.
     fields->zif_state~with( NEW zcl_transition( i_pattern = '^(?!FROM$).*' i_next = fields ) ).
     fields->zif_state~with( NEW zcl_transition( i_pattern = 'FROM' i_next = from_state ) ).
     from_state->zif_state~with( NEW zcl_transition( i_pattern = '.*' i_next = entity ) ).
-    entity->zif_state~with( NEW zcl_transition( i_pattern = '.*' i_next = where ) ).
+    entity->zif_state~with( NEW zcl_transition( i_pattern = 'WHERE' i_next = where_initial ) ).
+    where_initial->zif_state~with( NEW zcl_transition( i_pattern = '.*' i_next = where ) ).
     where->zif_state~with( NEW zcl_transition( i_pattern = '^(?!\?|:).*' i_next = where ) ).
     where->zif_state~with( NEW zcl_transition( i_pattern = '^\?.{1}' i_next = position_parameter ) ).
     where->zif_state~with( NEW zcl_transition( i_pattern = '^\?' i_next = unmarked_parameter ) ).

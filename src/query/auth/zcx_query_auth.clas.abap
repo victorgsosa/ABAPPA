@@ -1,11 +1,11 @@
-CLASS zcx_query DEFINITION
+CLASS zcx_query_auth DEFINITION
   PUBLIC
-  INHERITING FROM cx_static_check
+  INHERITING FROM zcx_query
+  FINAL
   CREATE PUBLIC .
 
   PUBLIC SECTION.
 
-    INTERFACES if_t100_dyn_msg .
     INTERFACES if_t100_message .
 
     METHODS constructor
@@ -18,18 +18,13 @@ ENDCLASS.
 
 
 
-CLASS zcx_query IMPLEMENTATION.
+CLASS zcx_query_auth IMPLEMENTATION.
 
 
   METHOD constructor ##ADT_SUPPRESS_GENERATION.
     CALL METHOD super->constructor
       EXPORTING
-        previous = previous.
-    CLEAR me->textid.
-    IF textid IS INITIAL.
-      if_t100_message~t100key = if_t100_message=>default_textid.
-    ELSE.
-      if_t100_message~t100key = textid.
-    ENDIF.
+        previous = previous
+        textid = textid.
   ENDMETHOD.
 ENDCLASS.

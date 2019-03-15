@@ -1,5 +1,13 @@
 INTERFACE zif_query
   PUBLIC .
+    TYPES: BEGIN OF selection,
+           field  TYPE fieldname,
+           sign   TYPE sign_range,
+           option TYPE opt_range,
+           low    TYPE low_range,
+           high   TYPE high_range,
+         END OF selection.
+  TYPES selection_tab TYPE STANDARD TABLE OF selection WITH DEFAULT KEY.
   TYPES objects TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
   TYPES: BEGIN OF parameter,
            name      TYPE string,

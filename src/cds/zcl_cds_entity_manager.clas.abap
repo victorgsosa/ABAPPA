@@ -26,6 +26,7 @@ CLASS zcl_cds_entity_manager IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_entity_manager~create_query.
+    DATA exception TYPE REF TO cx_root.
     DATA fsm TYPE REF TO zif_fsm.
     CLEAR r_query.
     fsm = lcl_query_fsm=>create( i_em = me ).
@@ -36,20 +37,34 @@ CLASS zcl_cds_entity_manager IMPLEMENTATION.
             FOR token IN tokens
             NEXT new_fsm = new_fsm->switch_state( token )
         ).
-      CATCH zcx_fsm INTO DATA(exception).
+      CATCH zcx_fsm INTO exception.
         RAISE EXCEPTION TYPE zcx_query
           EXPORTING
             previous = exception.
     ENDTRY.
+
     DATA(result) = CAST lcl_query_fsm( fsm )->get_result( ).
+    DATA(where) = COND #(
+    WHEN i_selections IS NOT INITIAL THEN |( { result->get_where( ) } ) AND ( { zcl_query_utils=>range_as_where( i_selections = i_selections ) } )|
+    ELSE result->get_where( )
+    ).
+    IF i_authorizations IS NOT INITIAL.
+      DATA(authorization_where) = REDUCE string(
+          INIT r = ``
+          FOR authorization IN i_authorizations
+          NEXT r =  r && ` AND ( ` && authorization->restrict( ) && ` )`
+      ).
+      where = where && authorization_where.
+    ENDIF.
     r_query = NEW zcl_query(
         i_entity_manager = me
         i_entity = result->get_entity( )
         i_parameters = result->get_parameters( )
-        i_where_string = result->get_where( )
+        i_where_string = where
         i_fields = result->get_fields( )
     ).
   ENDMETHOD.
+
 
 
 ENDCLASS.

@@ -11,7 +11,9 @@ CLASS zcl_attribute DEFINITION
         i_abap_type     TYPE REF TO cl_abap_typedescr
         i_parent_entity TYPE REF TO zif_entity
         i_accesor       TYPE REF TO zif_accesor
-        i_mutator       TYPE REF TO zif_mutator.
+        i_mutator       TYPE REF TO zif_mutator
+        i_collection    type abap_bool DEFAULT abap_false
+        i_association type abap_bool DEFAULT abap_false.
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA name TYPE string.
@@ -19,7 +21,8 @@ CLASS zcl_attribute DEFINITION
     DATA parent_entity TYPE REF TO zif_entity.
     DATA accesor TYPE REF TO zif_accesor.
     DATA mutator TYPE REF TO zif_mutator.
-
+    data collection type abap_bool.
+    data association type abap_bool.
 ENDCLASS.
 
 
@@ -33,7 +36,8 @@ CLASS zcl_attribute IMPLEMENTATION.
     me->parent_entity = i_parent_entity.
     me->accesor = i_accesor.
     me->mutator = i_mutator.
-
+    me->collection = i_collection.
+    me->association = i_association.
   ENDMETHOD.
   METHOD zif_attribute~accesor.
     r_accesor = me->accesor.
@@ -53,6 +57,14 @@ CLASS zcl_attribute IMPLEMENTATION.
 
   METHOD zif_attribute~get_abap_type.
     r_abap_type = me->abap_type.
+  ENDMETHOD.
+
+  METHOD zif_attribute~is_association.
+    r_association = me->association.
+  ENDMETHOD.
+
+  METHOD zif_attribute~is_collection.
+    r_collection = me->collection.
   ENDMETHOD.
 
 ENDCLASS.
